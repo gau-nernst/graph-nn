@@ -10,32 +10,34 @@ from utils import add_self_loops
 class GCNLayer(nn.Module):
     def __init__(
         self,
-        adjacency_matrix: torch.Tensor,
         input_dim: int,
         output_dim: int,
-        is_normalized: bool = False,
         norm: Optional[Callable[[int], nn.Module]] = None,
         activation: Callable[[], nn.Module] = partial(nn.ReLU, inplace=True),
     ):
         super().__init__()
-        if not is_normalized:
-            adjacency_matrix = self.normalize_adjacency_matrix(adjacency_matrix)
-        self.register_buffer("norm_adj_mat", adjacency_matrix)
         self.norm = None if norm is None else norm(input_dim)
-        self.linear = nn.Linear(input_dim, output_dim, bias=False)
+        self.weight = nn.Parameter(torch.empty(input_dim, output_dim))
         self.act = activation()
 
-    def forward(self, x: torch.Tensor):
+        nn.init.kaiming_normal_(self.weight)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        edge_indices: Optional[torch.Tensor] = None,
+        norm_adj_mat: Optional[torch.Tensor] = None,
+    ):
+        assert (edge_indices is not None) or (norm_adj_mat is not None)
+        if norm_adj_mat is None:
+            norm_adj_mat = self.create_norm_adj_mat(edge_indices)
         if self.norm is not None:
             x = self.norm(x)
-        return self.act(self.norm_adj_mat @ self.linear(x))
+        return self.act(norm_adj_mat @ x @ self.weight)
 
     @staticmethod
-    def normalize_adjacency_matrix(adj_mat: torch.Tensor):
-        assert adj_mat.is_sparse
-        adj_mat = add_self_loops(adj_mat).float()
-        degree_invsqrt = torch.sparse.sum(adj_mat, dim=0).to_dense().rsqrt()
-
-        indices, values = adj_mat.indices(), adj_mat.values()
-        values *= degree_invsqrt[indices[0]] * degree_invsqrt[indices[1]]
-        return adj_mat
+    def create_norm_adj_mat(edge_indices: torch.Tensor, num_nodes: int):
+        edge_indices = add_self_loops(edge_indices=edge_indices, num_nodes=num_nodes)
+        deg_rsqrt = torch.bincount(edge_indices[0], minlength=num_nodes).rsqrt()
+        values = deg_rsqrt[edge_indices[0]] * deg_rsqrt[edge_indices[1]]
+        return torch.sparse_coo_tensor(edge_indices, values).coalesce()
