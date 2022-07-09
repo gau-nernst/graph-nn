@@ -4,6 +4,8 @@ from typing import Callable, Optional
 import torch
 from torch import nn
 
+from utils import add_self_loops
+
 
 class GCNLayer(nn.Module):
     def __init__(
@@ -29,18 +31,11 @@ class GCNLayer(nn.Module):
         return self.act(self.norm_adj_mat @ self.linear(x))
 
     @staticmethod
-    def normalize_adjacency_matrix(adjacency_matrix: torch.Tensor):
-        assert adjacency_matrix.is_sparse
-        adjacency_matrix = adjacency_matrix.cpu().float()
-        n = adjacency_matrix.shape[0]
-        diag, size = [list(range(n))] * 2, [n] * 2
+    def normalize_adjacency_matrix(adj_mat: torch.Tensor):
+        assert adj_mat.is_sparse
+        adj_mat = add_self_loops(adj_mat).float()
+        degree_invsqrt = torch.sparse.sum(adj_mat, dim=0).to_dense().rsqrt()
 
-        identity_matrix = torch.sparse_coo_tensor(diag, [1.0] * n, size=size)
-        adjacency_matrix = (adjacency_matrix + identity_matrix).coalesce()
-        degree_invsqrt = torch.sparse.sum(adjacency_matrix, dim=0).to_dense().rsqrt()
-
-        indices = adjacency_matrix._indices()
-        values = adjacency_matrix._values()
-        for idx, (i, j) in enumerate(zip(indices[0], indices[1])):
-            values[idx] *= degree_invsqrt[i] * degree_invsqrt[j]
-        return torch.sparse_coo_tensor(indices, values, size=size)
+        indices, values = adj_mat.indices(), adj_mat.values()
+        values *= degree_invsqrt[indices[0]] * degree_invsqrt[indices[1]]
+        return adj_mat
