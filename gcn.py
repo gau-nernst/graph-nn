@@ -1,10 +1,10 @@
 from functools import partial
-from typing import Callable, Optional
+from typing import Optional
 
 import torch
 from torch import nn
 
-from utils import add_self_loops
+from utils import _Activation, _Norm, add_self_loops
 
 
 class GCNLayer(nn.Module):
@@ -12,15 +12,13 @@ class GCNLayer(nn.Module):
         self,
         input_dim: int,
         output_dim: int,
-        norm: Optional[Callable[[int], nn.Module]] = None,
-        activation: Callable[[], nn.Module] = partial(nn.ReLU, inplace=True),
+        norm: Optional[_Norm] = None,
+        activation: _Activation = partial(nn.ReLU, inplace=True),
     ):
         super().__init__()
         self.norm = None if norm is None else norm(input_dim)
-        self.weight = nn.Parameter(torch.empty(input_dim, output_dim))
+        self.linear = nn.Linear(input_dim, output_dim, bias=False)
         self.act = activation()
-
-        nn.init.kaiming_normal_(self.weight)
 
     def forward(
         self,
@@ -30,10 +28,10 @@ class GCNLayer(nn.Module):
     ):
         assert (edge_indices is not None) or (norm_adj_mat is not None)
         if norm_adj_mat is None:
-            norm_adj_mat = self.create_norm_adj_mat(edge_indices)
+            norm_adj_mat = self.create_norm_adj_mat(edge_indices, x.shape[0])
         if self.norm is not None:
             x = self.norm(x)
-        return self.act(norm_adj_mat @ x @ self.weight)
+        return self.act(norm_adj_mat @ self.linear(x))
 
     @staticmethod
     def create_norm_adj_mat(edge_indices: torch.Tensor, num_nodes: int):

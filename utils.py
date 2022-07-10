@@ -1,5 +1,11 @@
+from typing import Callable
+
 import torch
+from torch import nn
 from torch.types import _device, _dtype
+
+_Activation = Callable[[], nn.Module]
+_Norm = Callable[[int], nn.Module]
 
 
 def eye_sparse(n: int, dtype: _dtype = None, device: _device = None) -> torch.Tensor:
