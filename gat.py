@@ -40,9 +40,9 @@ class GATLayer(nn.Module):
 
         src_attn = F.embedding(edge_indices[0], (x * self.src_attn).sum(dim=-1))
         dst_attn = F.embedding(edge_indices[1], (x * self.dst_attn).sum(dim=-1))
-        y = self.act(src_attn + dst_attn)
-        attn_coef = torch.sparse_coo_tensor(edge_indices, y)
-        attn_weights = torch.sparse.softmax(attn_coef, dim=1).coalesce()
+        attn_coef = self.act(src_attn + dst_attn)
+        attn_mat = torch.sparse_coo_tensor(edge_indices, attn_coef, requires_grad=True)
+        attn_weights = torch.sparse.softmax(attn_mat, dim=1).coalesce()
 
         # It might be more efficient to apply edge dropping to inputs
         # instead of applying dropout to softmax weights
