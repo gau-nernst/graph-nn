@@ -1,9 +1,11 @@
 from functools import partial
 
 import torch
+import torch.nn.functional as F
 from torch import nn
+# import torch_sparse
 
-from utils import _Activation, add_self_loops
+from utils import _Activation, init_glorot
 
 
 class GATLayer(nn.Module):
@@ -29,32 +31,31 @@ class GATLayer(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.kaiming_normal_(self.src_attn, nonlinearity="linear")
-        nn.init.kaiming_normal_(self.dst_attn, nonlinearity="linear")
+        init_glorot(self.linear.weight, self.linear.in_features, self.head_dim)
+        init_glorot(self.src_attn, self.head_dim, 1, gain=0.5**0.5)
+        init_glorot(self.dst_attn, self.head_dim, 1, gain=0.5**0.5)
 
     def forward(self, x: torch.Tensor, edge_indices: torch.Tensor):
-        edge_indices = add_self_loops(edge_indices=edge_indices, num_nodes=x.shape[0])
-
-        # Input dropout is expensive when node emmbeddings have high dimensionality,
-        # while not effective when the embeddings are sparse.
-        # Dropout after linear is not mentioned in the paper.
-        # x = self.dropout(x)
         x = self.linear(x).reshape(-1, self.num_heads, self.head_dim)
-        x = self.dropout(x)
 
-        src_attn = (x * self.src_attn).sum(dim=-1)[edge_indices[0]]
-        dst_attn = (x * self.dst_attn).sum(dim=-1)[edge_indices[1]]
-        attn_coef = torch.sparse_coo_tensor(edge_indices, self.act(src_attn + dst_attn))
+        src_attn = F.embedding(edge_indices[0], (x * self.src_attn).sum(dim=-1))
+        dst_attn = F.embedding(edge_indices[1], (x * self.dst_attn).sum(dim=-1))
+        y = self.act(src_attn + dst_attn)
+        attn_coef = torch.sparse_coo_tensor(edge_indices, y)
         attn_weights = torch.sparse.softmax(attn_coef, dim=1).coalesce()
 
-        indices, values = attn_weights.indices(), attn_weights.values()
-        values = self.dropout(values)
-        crow_idx = torch._convert_indices_from_coo_to_csr(indices[0], x.shape[0])
+        # It might be more efficient to apply edge dropping to inputs
+        # instead of applying dropout to softmax weights
+        indices = attn_weights.indices()
+        values = self.dropout(attn_weights.values())
 
         head_outputs = []
         for i in range(self.num_heads):
-            values_i = values[:, i].contiguous()
-            weights_i = torch.sparse_csr_tensor(crow_idx, indices[1], values_i)
-            head_outputs.append(torch.sparse.mm(weights_i, x[:, i]))
+            # Backward for sparse tensor can be buggy
+            w_i = torch.sparse_coo_tensor(indices, values[:, i], requires_grad=True)
+            head_outputs.append(torch.sparse.mm(w_i, x[:, i]))
+
+            # Alternatively, use torch_sparse for sparse x dense matmul
+            # head_outputs.append(torch_sparse.spmm(indices, values[i], x.shape[0], x.shape[0], x[:, i]))
 
         return torch.cat(head_outputs, dim=1)

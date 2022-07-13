@@ -15,7 +15,10 @@ def eye_sparse(n: int, dtype: _dtype = None, device: _device = None) -> torch.Te
 
 
 def add_self_loops(
-    *, adj_mat: torch.Tensor = None, edge_indices=None, num_nodes=None
+    *,
+    adj_mat: torch.Tensor = None,
+    edge_indices: torch.Tensor = None,
+    num_nodes: int = None
 ) -> torch.Tensor:
     if adj_mat is not None:
         assert adj_mat.is_sparse
@@ -30,3 +33,12 @@ def add_self_loops(
         return torch.cat([edge_indices, id_indices.unsqueeze(0).expand(2, -1)], dim=1)
 
     raise ValueError
+
+
+@torch.no_grad()
+def init_glorot(
+    tensor: torch.Tensor, fan_in: int, fan_out: int, gain: float = 1.0
+) -> torch.Tensor:
+    a = gain * (6 / (fan_in + fan_out)) ** 0.5
+    tensor.uniform_(-a, a)
+    return tensor
