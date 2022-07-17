@@ -17,4 +17,4 @@ class GCNLayer(nn.Module):
         edge_indices = add_self_loops(edge_indices=edge_indices, num_nodes=num_nodes)
         deg_rsqrt = torch.bincount(edge_indices[0], minlength=num_nodes).rsqrt()
         values = deg_rsqrt[edge_indices[0]] * deg_rsqrt[edge_indices[1]]
-        return torch.sparse_coo_tensor(edge_indices, values).to_sparse_csr()
+        return torch.sparse_coo_tensor(edge_indices, values).coalesce()
