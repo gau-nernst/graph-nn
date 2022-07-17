@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import nn
 # import torch_sparse
 
-from utils import _Activation, init_glorot
+from .utils import _Activation, init_glorot
 
 
 class GATLayer(nn.Module):

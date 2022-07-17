@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from utils import add_self_loops
+from .utils import add_self_loops
 
 
 class GCNLayer(nn.Module):
