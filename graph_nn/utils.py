@@ -1,13 +1,11 @@
-from typing import Callable
+from typing import Optional
 
 import torch
-from torch import nn
-
-_Activation = Callable[[], nn.Module]
-_Norm = Callable[[int], nn.Module]
 
 
-def add_self_loops(edge_indices: torch.Tensor, num_nodes: int = None) -> torch.Tensor:
+def append_identity_matrix(
+    edge_indices: torch.Tensor, num_nodes: Optional[int] = None
+) -> torch.Tensor:
     if num_nodes is None:
         num_nodes = edge_indices.max() + 1
     id_indices = torch.arange(num_nodes, device=edge_indices.device)
@@ -15,7 +13,7 @@ def add_self_loops(edge_indices: torch.Tensor, num_nodes: int = None) -> torch.T
 
 
 @torch.no_grad()
-def init_glorot(
+def init_glorot_uniform(
     tensor: torch.Tensor, fan_in: int, fan_out: int, gain: float = 1.0
 ) -> torch.Tensor:
     a = gain * (6 / (fan_in + fan_out)) ** 0.5

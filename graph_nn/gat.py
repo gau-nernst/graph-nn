@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from torch import nn
 # import torch_sparse
 
-from .utils import _Activation, init_glorot
+from .types import _Activation
+from .utils import init_glorot_uniform
 
 
 class GATLayer(nn.Module):
@@ -31,9 +32,9 @@ class GATLayer(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        init_glorot(self.linear.weight, self.linear.in_features, self.head_dim)
-        init_glorot(self.src_attn, self.head_dim, 1, gain=0.5**0.5)
-        init_glorot(self.dst_attn, self.head_dim, 1, gain=0.5**0.5)
+        init_glorot_uniform(self.linear.weight, self.linear.in_features, self.head_dim)
+        init_glorot_uniform(self.src_attn, self.head_dim, 1, gain=0.5**0.5)
+        init_glorot_uniform(self.dst_attn, self.head_dim, 1, gain=0.5**0.5)
 
     def forward(self, x: torch.Tensor, edge_indices: torch.Tensor):
         x = self.linear(x).reshape(-1, self.num_heads, self.head_dim)
