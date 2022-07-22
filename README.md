@@ -3,10 +3,8 @@
 This repo re-implements some popular Graph Neural Networks (GNNs) for learning purpose. The code depends only on PyTorch, but the datasets are taken from PyTorch Geometric.
 
 Implemented models
-- [Graph Convolutional Network](https://arxiv.org/abs/1609.02907) (GCN) ✅
+- [Graph Convolutional Network](https://arxiv.org/abs/1609.02907) (GCN)
 - [Graph Attention Network](https://arxiv.org/abs/1710.10903) (GAT)
-
-✅ means paper results can be re-produced by this repo.
 
 ## Set up environment
 
@@ -32,3 +30,25 @@ As of this writing:
   pip install torch-sparse torch-scatter
   pip install torch-geometric
   ```
+
+## Reproduce paper results
+
+```bash
+python main.py --model gcn --dataset Cora   # other options: CiteSeer, PubMed
+```
+
+### GCN
+
+Dataset   | Cora | CiteSeer | PubMed
+----------|------|----------|--------
+Paper     | 81.5 | 70.3     | 79.0
+This repo | 82.0 | 72.3     | 79.2
+
+### GAT
+
+Dataset   | Cora | CiteSeer | PubMed
+----------|------|----------|--------
+Paper     | 83.0 | 72.5     | 79.0
+This repo | 83.0 | 71.0*    |
+
+\* For GAT results on CiteSeer, see this GitHub issue: https://github.com/PetarV-/GAT/issues/14
