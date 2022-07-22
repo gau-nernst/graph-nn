@@ -77,6 +77,7 @@ def run(model_name: str, dataset_name: str) -> None:
     model_cls = _model_mapper[model_name]
     config = model_cls.get_config(dataset_name)
     pprint.pprint(config)
+    print()
 
     ds = get_dataset(dataset_name)
     data = ds[0]
@@ -84,6 +85,7 @@ def run(model_name: str, dataset_name: str) -> None:
     for x in ["train", "val", "test"]:
         size = data[f"{x}_mask"].sum().item()
         print(f"{x}_mask: {size}")
+    print()
 
     data.x = row_normalize(data.x)
     model, inputs = model_cls.build_model(

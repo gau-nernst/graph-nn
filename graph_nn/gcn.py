@@ -21,7 +21,7 @@ class GCNLayer(nn.Module):
         edge_indices: torch.Tensor, add_self_loops: bool = True
     ) -> torch.Tensor:
         if add_self_loops:
-            edge_indices = append_identity_matrix(edge_indices=edge_indices)
-        deg_rsqrt = torch.bincount(edge_indices[0]).rsqrt()
+            edge_indices = append_identity_matrix(edge_indices)
+        deg_rsqrt = torch.bincount(edge_indices[0]).rsqrt()  # out degree
         values = deg_rsqrt[edge_indices[0]] * deg_rsqrt[edge_indices[1]]
         return torch.sparse_coo_tensor(edge_indices, values).coalesce()

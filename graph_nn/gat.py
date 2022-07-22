@@ -3,7 +3,6 @@ from functools import partial
 import torch
 import torch.nn.functional as F
 from torch import nn
-# import torch_sparse
 
 from .types import _Activation
 from .utils import init_glorot_uniform
@@ -31,12 +30,12 @@ class GATLayer(nn.Module):
 
         self.reset_parameters()
 
-    def reset_parameters(self):
+    def reset_parameters(self) -> None:
         init_glorot_uniform(self.linear.weight, self.linear.in_features, self.head_dim)
-        init_glorot_uniform(self.src_attn, self.head_dim, 1, gain=0.5**0.5)
-        init_glorot_uniform(self.dst_attn, self.head_dim, 1, gain=0.5**0.5)
+        init_glorot_uniform(self.src_attn, self.head_dim * 2, 1)
+        init_glorot_uniform(self.dst_attn, self.head_dim * 2, 1)
 
-    def forward(self, x: torch.Tensor, edge_indices: torch.Tensor):
+    def forward(self, x: torch.Tensor, edge_indices: torch.Tensor) -> torch.Tensor:
         x = self.linear(x).reshape(-1, self.num_heads, self.head_dim)
 
         src_attn = F.embedding(edge_indices[0], (x * self.src_attn).sum(dim=-1))
@@ -52,11 +51,7 @@ class GATLayer(nn.Module):
 
         head_outputs = []
         for i in range(self.num_heads):
-            # Backward for sparse tensor can be buggy
             w_i = torch.sparse_coo_tensor(indices, values[:, i], requires_grad=True)
             head_outputs.append(torch.sparse.mm(w_i, x[:, i]))
-
-            # Alternatively, use torch_sparse for sparse x dense matmul
-            # head_outputs.append(torch_sparse.spmm(indices, values[i], x.shape[0], x.shape[0], x[:, i]))
 
         return torch.cat(head_outputs, dim=1)

@@ -6,8 +6,7 @@ import torch
 def append_identity_matrix(
     edge_indices: torch.Tensor, num_nodes: Optional[int] = None
 ) -> torch.Tensor:
-    if num_nodes is None:
-        num_nodes = edge_indices.max() + 1
+    num_nodes = num_nodes or edge_indices.max() + 1
     id_indices = torch.arange(num_nodes, device=edge_indices.device)
     return torch.cat([edge_indices, id_indices.unsqueeze(0).expand(2, -1)], dim=1)
 
