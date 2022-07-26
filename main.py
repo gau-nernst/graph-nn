@@ -2,7 +2,7 @@ import argparse
 import pprint
 import time
 from copy import deepcopy
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
 import torch.nn.functional as F
@@ -17,14 +17,27 @@ _model_mapper = {"gcn": GCNModel, "gat": GATModel}
 
 def get_dataset(dataset_name: str) -> PyGDataset:
     if dataset_name in ("Cora", "CiteSeer", "PubMed"):
-        return Planetoid("data", name=dataset_name)
+        ds = Planetoid("data", name=dataset_name)
+        return ds[0], ds.num_classes
+
     if dataset_name == "NELL":
-        return NELL("data")
+        ds = NELL("data")
+        data = ds[0]
+        data.x = data.x.to_torch_sparse_coo_tensor()
+        return data, ds.num_classes
+
     raise ValueError(f"Dataset {dataset_name} is not supported")
 
 
 def row_normalize(x: torch.Tensor) -> torch.Tensor:
     # A row may be all zeros e.g. PubMed dataset
+    if x.is_sparse:
+        x = x.coalesce()
+        x_sum = torch.sparse.sum(x, dim=1).to_dense().clip_(min=1e-8)
+        indices = x.indices()
+        values = x.values() / x_sum[indices[0]]
+        return torch.sparse_coo_tensor(indices, values, x.size())
+
     return x / x.sum(dim=1, keepdim=True).clip_(min=1e-8)
 
 
@@ -35,18 +48,21 @@ def train(
     mask: torch.Tensor,
     optim: torch.optim.Optimizer,
     l2_regularization: float,
-    l2_prefix: Optional[str] = None,
 ) -> float:
     model.train()
     optim.zero_grad()
     out = model(*inputs)
     loss = F.cross_entropy(out[mask], y[mask])
-    l2_model = model if l2_prefix is None else getattr(model, l2_prefix)
-    loss = loss + l2_loss(l2_model) * l2_regularization
+    if l2_regularization > 0:
+        if hasattr(model, "l2_prefix"):
+            l2_model = getattr(model, model.l2_prefix)
+        else:
+            l2_model = model
+        loss = loss + l2_loss(l2_model) * l2_regularization
 
     loss.backward()
     optim.step()
-    return loss.item()
+    return loss.cpu().item()
 
 
 @torch.inference_mode()
@@ -58,10 +74,10 @@ def eval(
 ) -> Tuple[float, float]:
     model.eval()
     out = model(*inputs)
-    loss = F.cross_entropy(out[mask], y[mask]).item()
+    loss = F.cross_entropy(out[mask], y[mask]).cpu().item()
 
     preds = out[mask].argmax(dim=1)
-    acc = (preds == y[mask]).sum().item() / mask.sum().item()
+    acc = ((preds == y[mask]).sum() / mask.sum()).cpu().item()
 
     return loss, acc
 
@@ -70,34 +86,47 @@ def l2_loss(model: nn.Module) -> torch.Tensor:
     return sum(p.square().sum() for p in model.parameters())
 
 
-def run(model_name: str, dataset_name: str) -> None:
-    print(f"{model_name = }, {dataset_name = }")
-    model_name = model_name.lower()
-    assert model_name in _model_mapper
-    model_cls = _model_mapper[model_name]
-    config = model_cls.get_config(dataset_name)
-    pprint.pprint(config)
-    print()
-
-    ds = get_dataset(dataset_name)
-    data = ds[0]
+def run(
+    model: str,
+    dataset: str,
+    num_epochs: int,
+    optimizer: str,
+    lr: float,
+    weight_decay: float,
+    momentum: float,
+    l2_regularization: float,
+    device: str,
+    **model_params,
+) -> None:
+    data, num_classes = get_dataset(dataset)
+    data.x = row_normalize(data.x)
     print(data)
     for x in ["train", "val", "test"]:
         size = data[f"{x}_mask"].sum().item()
         print(f"{x}_mask: {size}")
     print()
 
-    data.x = row_normalize(data.x)
-    model, inputs = model_cls.build_model(
-        data.num_features, ds.num_classes, config, data
-    )
-    optim = config["optimizer"](model.parameters())
+    model_params = {
+        "input_dim": data.x.shape[-1],
+        "num_classes": num_classes,
+        **model_params,
+    }
+    model_cls = _model_mapper[model.lower()]
+    model, inputs = model_cls.build_model(model_params, data)
+    model.to(device)
+    inputs = tuple(x.to(device) for x in inputs)
+
+    optim_cls = getattr(torch.optim, optimizer)
+    optim_params = {"lr": lr, "weight_decay": weight_decay}
+    if optimizer == "SGD":
+        optim_params["momentum"] = momentum
+    optim = optim_cls(model.parameters(), **optim_params)
 
     best_acc = best_epoch = 0
     best_loss = float("inf")
     best_state_dict = None
     time0 = time.time()
-    for i in range(config["num_epochs"]):
+    for i in range(num_epochs):
         epoch = i + 1
 
         train_loss = train(
@@ -106,8 +135,7 @@ def run(model_name: str, dataset_name: str) -> None:
             data.y,
             data.train_mask,
             optim,
-            config["l2_regularization"],
-            config.get("l2_prefix"),
+            l2_regularization,
         )
         val_loss, val_acc = eval(model, inputs, data.y, data.val_mask)
 
@@ -141,9 +169,27 @@ def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
     parser.add_argument("--dataset", required=True)
+    parser.add_argument("--device", default="cpu")
+
+    parser.add_argument("--num_epochs", type=int, default=300)
+    parser.add_argument("--optimizer", default="Adam")
+    parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--weight_decay", type=float, default=0.0)
+    parser.add_argument("--momentum", type=float, default=0.0)
+    parser.add_argument("--l2_regularization", type=float, default=0.0)
+
     return parser
 
 
 if __name__ == "__main__":
-    args = get_parser().parse_args()
-    run(args.model, args.dataset)
+    parser = get_parser()
+    args, extra = parser.parse_known_args()
+    model_cls = _model_mapper[args.model.lower()]
+    model_cls.add_arguments(parser)
+    args = parser.parse_args()
+
+    args = vars(args)
+    pprint.pprint(args)
+    print()
+
+    run(**args)
