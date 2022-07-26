@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "graph-nn"
+version = "0.0.1"
+authors = [
+  { name="Thien Tran" },
+]
+description = "Simple PyTorch implementations of popular Graph neural networks"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = ["torch>=1.10"]
+
+[project.urls]
+"Homepage" = "https://github.com/gau-nernst/graph-nn"
+"Bug Tracker" = "https://github.com/gau-nernst/graph-nn/issues"
+
+[project.optional-dependencies]
+full = ["torch-geometric"]
+
+[tool.setuptools]
+packages = ["graph_nn"]
