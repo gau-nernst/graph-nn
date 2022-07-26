@@ -33,11 +33,13 @@ As of this writing:
 
 ## Reproduce paper results
 
-All hyperparameters are taken directly from the respective papers.
+Unless otherwise stated, hyperparameters are taken directly from the respective papers.
 
 ```bash
 python main.py --model gcn --dataset Cora   # other options: CiteSeer, PubMed
 ```
+
+Add `--device cuda` if you want to train on GPU.
 
 ### GCN
 
@@ -64,11 +66,19 @@ Related issues to GCN on NELL (possibly due to data preprocessing):
 ```bash
 # For Cora and CiteSeer
 python main.py --model gat --dataset Cora --dropout 0.6 --l2_regularization 5e-4 --lr 5e-3 --num_epochs 1000
+
+# For PubMed (different from paper)
+python main.py --model gat --dataset PubMed --dropout 0.6 --l2_regularization 5e-4 --lr 5e-3 --num_epochs 1000 --output_heads 8
 ```
 
 Dataset   | Cora | CiteSeer | PubMed
 ----------|------|----------|--------
 Paper     | 83.0 | 72.5     | 79.0
-This repo | 83.0 | 71.0*    |
+This repo | 83.0 | 71.0     | 79.4
 
-\* For GAT results on CiteSeer, see this GitHub issue: https://github.com/PetarV-/GAT/issues/14
+Related issues to GAT on CiteSeer and PubMed:
+
+- https://github.com/PetarV-/GAT/issues/14
+- https://github.com/PetarV-/GAT/issues/12
+
+For PubMed, using hyperparameters provided by the paper `--l2_regularization 1e-3 --lr 1e-2`, I can only achieve 77.7 accuracy.
