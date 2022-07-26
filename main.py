@@ -115,6 +115,7 @@ def run(
     model, inputs = model_cls.build_model(model_params, data)
     model.to(device)
     inputs = tuple(x.to(device) for x in inputs)
+    data = data.to(device)
 
     optim_cls = getattr(torch.optim, optimizer)
     optim_params = {"lr": lr, "weight_decay": weight_decay}
