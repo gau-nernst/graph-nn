@@ -19,13 +19,17 @@ class GATLayer(nn.Module):
         num_heads: int,
         activation: _Activation = partial(nn.LeakyReLU, negative_slope=0.2),
         dropout: float = 0.0,
+        aggregate: str = "concat",
     ):
-        assert output_dim % num_heads == 0
+        assert aggregate in ("concat", "mean")
+        if aggregate == "concat":
+            assert output_dim % num_heads == 0
         super().__init__()
         self.num_heads = num_heads
-        self.head_dim = output_dim // num_heads
+        self.head_dim = output_dim // num_heads if aggregate == "concat" else output_dim
+        self.aggregate = aggregate
 
-        self.linear = nn.Linear(input_dim, output_dim, bias=False)
+        self.linear = nn.Linear(input_dim, self.head_dim * num_heads, bias=False)
         self.src_attn = nn.Parameter(torch.empty(1, num_heads, self.head_dim))
         self.dst_attn = nn.Parameter(torch.empty(1, num_heads, self.head_dim))
         self.act = activation()
@@ -57,4 +61,7 @@ class GATLayer(nn.Module):
             w_i = torch.sparse_coo_tensor(indices, values[:, i], requires_grad=True)
             head_outputs.append(torch.sparse.mm(w_i, x[:, i]))
 
-        return torch.cat(head_outputs, dim=1)
+        if self.aggregate == "concat":
+            return torch.cat(head_outputs, dim=1)
+        if self.aggregate == "mean":
+            return sum(head_outputs) / self.num_heads

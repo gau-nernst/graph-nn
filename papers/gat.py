@@ -18,12 +18,15 @@ class GATModel(nn.Module):
         hidden_dim: int,
         num_classes: int,
         num_heads: int,
+        output_heads: int,
         dropout: float,
         activation: _Activation = partial(nn.ELU, inplace=True),
     ):
         super().__init__()
         self.layer1 = GATLayer(input_dim, hidden_dim, num_heads, dropout=dropout)
-        self.layer2 = GATLayer(hidden_dim, num_classes, 1, dropout=dropout)
+        self.layer2 = GATLayer(
+            hidden_dim, num_classes, output_heads, dropout=dropout, aggregate="mean"
+        )
         self.act = activation()
         self.dropout = Dropout(p=dropout)
 
@@ -35,6 +38,7 @@ class GATModel(nn.Module):
     def add_arguments(parser: argparse.ArgumentParser):
         parser.add_argument("--hidden_dim", type=int, default=64)
         parser.add_argument("--num_heads", type=int, default=8)
+        parser.add_argument("--output_heads", type=int, default=1)
         parser.add_argument("--dropout", type=float, default=0.6)
 
     @staticmethod
