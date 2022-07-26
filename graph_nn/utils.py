@@ -1,6 +1,10 @@
 from typing import Optional
 
 import torch
+from torch import nn
+
+
+__all__ = ["append_identity_matrix", "init_glorot_uniform", "Dropout"]
 
 
 def append_identity_matrix(
@@ -18,3 +22,13 @@ def init_glorot_uniform(
     a = gain * (6 / (fan_in + fan_out)) ** 0.5
     tensor.uniform_(-a, a)
     return tensor
+
+
+class Dropout(nn.Dropout):
+    """Dropout with support for sparse COO tensors."""
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if x.is_sparse:
+            x = x.coalesce()
+            values = super().forward(x.values())
+            return torch.sparse_coo_tensor(x.indices(), values, x.size())
+        return super().forward(x)

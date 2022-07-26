@@ -8,6 +8,9 @@ from .types import _Activation
 from .utils import init_glorot_uniform
 
 
+__all__ = ["GATLayer"]
+
+
 class GATLayer(nn.Module):
     def __init__(
         self,
