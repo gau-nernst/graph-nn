@@ -13,8 +13,8 @@ conda create -n gnn python=3.10
 conda activate gnn
 conda install pytorch -c pytorch
 
-# if you need CUDA, run this instead
-# conda install pytorch=1.11 cudatoolkit=11.3 -c pytorch
+# if you need CUDA
+# conda install pytorch cudatoolkit -c pytorch
 
 # optional
 conda install pyg -c pyg
@@ -33,18 +33,38 @@ As of this writing:
 
 ## Reproduce paper results
 
+All hyperparameters are taken directly from the respective papers.
+
 ```bash
 python main.py --model gcn --dataset Cora   # other options: CiteSeer, PubMed
 ```
 
 ### GCN
 
-Dataset   | Cora | CiteSeer | PubMed
-----------|------|----------|--------
-Paper     | 81.5 | 70.3     | 79.0
-This repo | 82.0 | 72.3     | 79.2
+```bash
+# For Cora, CiteSeer, and PubMed
+python main.py --model gcn --dataset Cora --dropout 0.5 --l2_regularization 5e-4 --lr 1e-2 --num_epochs 200
+
+# For NELL
+python main.py --model gcn --dataset NELL --dropout 0.1 --l2_regularization 1e-5 --lr 1e-2 --hidden_dim 64 --num_epochs 200
+```
+
+Dataset   | Cora | CiteSeer | PubMed | NELL
+----------|------|----------|--------|-----
+Paper     | 81.5 | 70.3     | 79.0   | 66.0
+This repo | 82.0 | 72.3     | 79.2   | 58.0
+
+Related issues to GCN on NELL (possibly due to data preprocessing):
+
+- https://github.com/pyg-team/pytorch_geometric/issues/2392
+- https://github.com/tkipf/gcn/issues/14
 
 ### GAT
+
+```bash
+# For Cora and CiteSeer
+python main.py --model gat --dataset Cora --dropout 0.6 --l2_regularization 5e-4 --lr 5e-3 --num_epochs 1000
+```
 
 Dataset   | Cora | CiteSeer | PubMed
 ----------|------|----------|--------
