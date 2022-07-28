@@ -21,10 +21,6 @@ conda install pyg -c pyg
 ```
 
 As of this writing:
-- PyTorch Geometric doesn't have pre-built binaries for PyTorch 1.12. You might need to install PyTorch 1.11 instead.
-  ```bash
-  conda install pytorch=1.11 -c pytorch
-  ```
 - PyTorch Geometric doesn't have pre-built binaries for macOS ARM64 (Apple Silicon). You might need to install it from source
   ```bash
   pip install torch-sparse torch-scatter
