@@ -1,8 +1,6 @@
-import pytest
 import torch
 from graph_nn import GATLayer
 from graph_nn.utils import append_identity_matrix
-from main import run
 from torch_geometric.nn import GATConv
 
 
@@ -31,26 +29,3 @@ def test_gat_against_pyg(num_nodes: int, asymmetric_adj_mat_idx: torch.Tensor):
     grad1 = pyg_gat.lin_src.weight.grad
     grad2 = gat.linear.weight.grad
     assert torch.allclose(grad1, grad2, atol=1e-5)
-
-
-@pytest.mark.parametrize("dataset", ["Cora", "CiteSeer"])
-def test_gat_cora_citeseer(dataset: str):
-    test_acc = run(
-        model="gat",
-        dataset=dataset,
-        num_epochs=1000,
-        optimizer="Adam",
-        lr=5e-3,
-        weight_decay=0,
-        momentum=0,
-        l2_regularization=5e-4,
-        device="cpu",
-        hidden_dim=64,
-        num_heads=8,
-        output_heads=1,
-        dropout=0.6,
-    )
-    if dataset == "Cora":
-        assert test_acc > 0.825
-    elif dataset == "CiteSeer":
-        assert test_acc > 0.70

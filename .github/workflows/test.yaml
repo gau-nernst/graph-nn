@@ -13,7 +13,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.7", "3.8", "3.9", "3.10"]
-        pytorch-version: ["1.12.0"]
+        pytorch-version: ["1.8.0", "1.9.0", "1.10.0", "1.11.0", "1.12.0"]
 
     steps:
       - name: Checkout
@@ -32,4 +32,4 @@ jobs:
           pip install torch-geometric
 
       - name: Run tests
-        run: python -m pytest tests -v
+        run: python -m pytest -v
