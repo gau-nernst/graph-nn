@@ -1,13 +1,11 @@
 from functools import partial
-from typing import List
 
 import torch
 import torch.nn.functional as F
 from torch import nn
 
 from .types import _Activation
-from .utils import init_glorot_uniform
-
+from .utils import init_glorot_uniform, sparse_aggregate, sparse_row_softmax
 
 __all__ = ["GATLayer"]
 
@@ -44,59 +42,19 @@ class GATLayer(nn.Module):
         init_glorot_uniform(self.dst_attn, self.head_dim * 2, 1)
 
     def forward(self, x: torch.Tensor, edge_indices: torch.Tensor) -> torch.Tensor:
+        row_idx, col_idx = edge_indices[0], edge_indices[1]
         x = self.linear(x).reshape(-1, self.num_heads, self.head_dim)
-        
-        src_attn = F.embedding(edge_indices[0], (x * self.src_attn).sum(dim=-1))
-        dst_attn = F.embedding(edge_indices[1], (x * self.dst_attn).sum(dim=-1))
+
+        src_attn = F.embedding(row_idx, (x * self.src_attn).sum(dim=-1))
+        dst_attn = F.embedding(col_idx, (x * self.dst_attn).sum(dim=-1))
         attn_coef = self.act(src_attn + dst_attn)
-        # attn_mat = torch.sparse_coo_tensor(edge_indices, attn_coef, requires_grad=True)
-        # attn_weights = torch.sparse.softmax(attn_mat, dim=1).coalesce()
 
-        # It might be more efficient to apply edge dropping to inputs
-        # instead of applying dropout to softmax weights
-        # indices = attn_weights.indices()
-        # values = self.dropout(attn_weights.values())
-        values = sparse_softmax(edge_indices, attn_coef, 1, [x.shape[0], x.shape[0], self.num_heads])
-        values = self.dropout(values)
+        values = sparse_row_softmax(row_idx, attn_coef, x.shape[0])
+        values = self.dropout(values)  # DropEdge might be more efficient
 
-        # head_outputs = []
-        # for i in range(self.num_heads):
-        #     w_i = torch.sparse_coo_tensor(indices, values[:, i], requires_grad=True)
-        #     head_outputs.append(torch.sparse.mm(w_i, x[:, i]))
-
-        # if self.aggregate == "concat":
-        #     return torch.cat(head_outputs, dim=1)
-        # if self.aggregate == "mean":
-        #     return sum(head_outputs) / self.num_heads
-
-        values = x[edge_indices[1]] * values.unsqueeze(2)
-        out = torch.zeros_like(x)
-        out = out.scatter_add_(0, edge_indices[0, :, None, None].expand_as(values), values)
+        values = x[col_idx] * values.unsqueeze(2)
+        x = sparse_aggregate(row_idx, values, x.shape[0])
         if self.aggregate == "concat":
-            return out.flatten(1)
+            return x.flatten(1)
         if self.aggregate == "mean":
-            return out.mean(1)
-
-
-def sparse_softmax(indices: torch.Tensor, values: torch.Tensor, dim: int, shape: List[int]) -> torch.Tensor:
-    sparse_dim, dense_dim = indices.shape[0], values.dim() - 1
-    assert dim < sparse_dim + dense_dim
-    if dim >= sparse_dim:
-        return values.softmax(dim - sparse_dim)
-
-    index = indices[dim]
-    reduce_shape = list(shape)
-    reduce_shape.pop(dim)
-    max_val = torch.zeros(reduce_shape, device=values.device)
-
-    index_shape = list(index.shape) + [1] * dense_dim
-    index_scatter = index.view(index_shape).expand_as(values)
-    max_val = max_val.scatter_reduce(0, index_scatter, values, reduce="amax", include_self=False)
-    values = values - max_val[index]
-    
-    values = values.exp()
-    sum_val = torch.zeros(reduce_shape, device=values.device)
-    sum_val = sum_val.scatter_add_(0, index_scatter, values)
-    values = values / sum_val[index]
-
-    return values
+            return x.mean(1)
