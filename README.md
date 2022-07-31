@@ -1,5 +1,9 @@
 # Graph Neural Networks
 
+[![Test](https://github.com/gau-nernst/graph-nn/actions/workflows/test.yaml/badge.svg)](https://github.com/gau-nernst/graph-nn/actions/workflows/test.yaml)
+![python>=3.7](https://img.shields.io/badge/python-%3E%3D%203.7-informational)
+![torch>=1.10](https://img.shields.io/badge/torch-%3E%3D%201.10-informational)
+
 This repo re-implements some popular Graph Neural Networks (GNNs) for learning purpose. The code depends only on PyTorch, but the datasets are taken from PyTorch Geometric.
 
 Implemented models
