@@ -3,8 +3,8 @@ from graph_nn import GCNLayer
 from torch_geometric.nn import GCNConv
 
 
-def test_gcn_against_pyg(num_nodes: int, symmetric_adj_mat_idx: torch.Tensor):
-    indices = symmetric_adj_mat_idx
+def test_gcn_against_pyg(num_nodes: int, asymmetric_adj_mat_idx: torch.Tensor):
+    indices = asymmetric_adj_mat_idx
     in_dim, out_dim = 50, 64
 
     pyg_gcn = GCNConv(in_dim, out_dim, bias=False)
@@ -14,7 +14,8 @@ def test_gcn_against_pyg(num_nodes: int, symmetric_adj_mat_idx: torch.Tensor):
     x = torch.randn(num_nodes, in_dim)
     adj_mat = GCNLayer.normalize_adjacency_matrix(indices)
 
-    out1 = pyg_gcn(x, indices)
+    # by default PyG aggregates from source to target nodes
+    out1 = pyg_gcn(x, indices[[1, 0]])
     out2 = gcn(x, adj_mat)
     assert torch.allclose(out1, out2, atol=1e-7)
 
