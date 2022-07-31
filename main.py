@@ -131,12 +131,7 @@ def run(
         epoch = i + 1
 
         train_loss = train(
-            model,
-            inputs,
-            data.y,
-            data.train_mask,
-            optim,
-            l2_regularization,
+            model, inputs, data.y, data.train_mask, optim, l2_regularization
         )
         val_loss, val_acc = eval(model, inputs, data.y, data.val_mask)
 
@@ -164,6 +159,7 @@ def run(
     model.load_state_dict(best_state_dict)
     test_loss, test_acc = eval(model, inputs, data.y, data.test_mask)
     print(f"Test Acc: {test_acc * 100:.2f}")
+    return test_acc
 
 
 def get_parser() -> argparse.ArgumentParser:
