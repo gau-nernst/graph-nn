@@ -6,7 +6,7 @@ import torch
 from torch import nn
 from torch_geometric.data import Data as PyGData
 
-from graph_nn import GATLayer, Dropout
+from graph_nn import Dropout, GATLayer
 from graph_nn.types import _Activation
 from graph_nn.utils import append_identity_matrix
 

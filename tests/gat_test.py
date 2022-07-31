@@ -1,7 +1,8 @@
 import torch
+from torch_geometric.nn import GATConv
+
 from graph_nn import GATLayer
 from graph_nn.utils import append_identity_matrix
-from torch_geometric.nn import GATConv
 
 
 def test_gat_against_pyg(num_nodes: int, asymmetric_adj_mat_idx: torch.Tensor):

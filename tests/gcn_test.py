@@ -1,6 +1,7 @@
 import torch
-from graph_nn import GCNLayer
 from torch_geometric.nn import GCNConv
+
+from graph_nn import GCNLayer
 
 
 def test_gcn_against_pyg(num_nodes: int, asymmetric_adj_mat_idx: torch.Tensor):
