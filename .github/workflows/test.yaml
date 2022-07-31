@@ -12,8 +12,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
-        pytorch-version: ["1.8.0", "1.9.0", "1.10.0", "1.11.0", "1.12.0"]
+        python-version: ["3.7", "3.8", "3.9"]
+        pytorch-version: ["1.8.1", "1.9.1", "1.10.2", "1.11.0", "1.12.0"]
+        include:
+          - pytorch-version: "1.12.0"
+            python-version: "3.10"
 
     steps:
       - name: Checkout
@@ -26,10 +29,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install torch==${{ matrix.pytorch-version }} pytest
+          pip install torch==${{ matrix.pytorch-version }} --extra-index-url https://download.pytorch.org/whl/cpu
           pip install torch-scatter -f https://data.pyg.org/whl/torch-${{ matrix.pytorch-version }}+cpu.html
           pip install torch-sparse -f https://data.pyg.org/whl/torch-${{ matrix.pytorch-version }}+cpu.html
           pip install torch-geometric
+          pip install pytest
 
       - name: Run tests
         run: python -m pytest -v
