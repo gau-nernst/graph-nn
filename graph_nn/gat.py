@@ -5,8 +5,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from .types import _Activation
-from .utils import init_glorot_uniform
-
+from .utils import init_glorot_uniform, sparse_aggregate, sparse_row_softmax
 
 __all__ = ["GATLayer"]
 
@@ -43,25 +42,19 @@ class GATLayer(nn.Module):
         init_glorot_uniform(self.dst_attn, self.head_dim * 2, 1)
 
     def forward(self, x: torch.Tensor, edge_indices: torch.Tensor) -> torch.Tensor:
+        row_idx, col_idx = edge_indices[0], edge_indices[1]
         x = self.linear(x).reshape(-1, self.num_heads, self.head_dim)
 
-        src_attn = F.embedding(edge_indices[0], (x * self.src_attn).sum(dim=-1))
-        dst_attn = F.embedding(edge_indices[1], (x * self.dst_attn).sum(dim=-1))
+        src_attn = F.embedding(row_idx, (x * self.src_attn).sum(dim=-1))
+        dst_attn = F.embedding(col_idx, (x * self.dst_attn).sum(dim=-1))
         attn_coef = self.act(src_attn + dst_attn)
-        attn_mat = torch.sparse_coo_tensor(edge_indices, attn_coef, requires_grad=True)
-        attn_weights = torch.sparse.softmax(attn_mat, dim=1).coalesce()
 
-        # It might be more efficient to apply edge dropping to inputs
-        # instead of applying dropout to softmax weights
-        indices = attn_weights.indices()
-        values = self.dropout(attn_weights.values())
+        values = sparse_row_softmax(row_idx, attn_coef, x.shape[0])
+        values = self.dropout(values)  # DropEdge might be more efficient
 
-        head_outputs = []
-        for i in range(self.num_heads):
-            w_i = torch.sparse_coo_tensor(indices, values[:, i], requires_grad=True)
-            head_outputs.append(torch.sparse.mm(w_i, x[:, i]))
-
+        values = x[col_idx] * values.unsqueeze(2)
+        x = sparse_aggregate(row_idx, values, x.shape[0])
         if self.aggregate == "concat":
-            return torch.cat(head_outputs, dim=1)
+            return x.flatten(1)
         if self.aggregate == "mean":
-            return sum(head_outputs) / self.num_heads
+            return x.mean(1)
