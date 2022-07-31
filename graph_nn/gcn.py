@@ -3,7 +3,6 @@ from torch import nn
 
 from .utils import append_identity_matrix
 
-
 __all__ = ["GCNLayer"]
 
 

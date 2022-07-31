@@ -6,7 +6,7 @@ import torch
 from torch import nn
 from torch_geometric.data import Data as PyGData
 
-from graph_nn import GCNLayer, Dropout
+from graph_nn import Dropout, GCNLayer
 from graph_nn.types import _Activation
 
 
