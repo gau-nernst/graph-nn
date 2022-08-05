@@ -8,7 +8,7 @@ __all__ = [
     "append_identity_matrix",
     "init_glorot_uniform",
     "Dropout",
-    "sparse_row_softmax",
+    "sparse_softmax",
     "sparse_aggregate",
 ]
 
@@ -41,22 +41,22 @@ class Dropout(nn.Dropout):
         return super().forward(x)
 
 
-def sparse_row_softmax(
-    row_idx: torch.Tensor, values: torch.Tensor, num_nodes: int
+def sparse_softmax(
+    idx: torch.Tensor, values: torch.Tensor, num_nodes: int
 ) -> torch.Tensor:
-    """Apply softmax for each row (i.e. apply over column dimension).
+    """Apply softmax for COO sparse tensor. Softmax is applied for each row if `idx` is row indices, or similarly for column indices.
     Values can represent N-dim weight coefficients, such as multi-head mechanism in GAT.
 
-    This is equivalent to `torch.sparse.softmax(torch.sparse_coo_tensor(indices, values), dim=1).coalesce().values()`.
+    If you pass in row indices, it is equivalent to `torch.sparse.softmax(torch.sparse_coo_tensor(indices, values), dim=1).coalesce().values()`.
 
     Args:
-        row_idx: row indices. Shape (nnz,)
+        idx: row or column indices. Shape (nnz,)
         values: weight coefficients. Shape (nnz, dim1, dim2, ...)
         num_nodes: number of nodes
     """
 
     reduced_shape = (num_nodes,) + values.shape[1:]
-    expanded_row_idx = row_idx.view([-1] + [1] * (values.dim() - 1)).expand_as(values)
+    expanded_row_idx = idx.view([-1] + [1] * (values.dim() - 1)).expand_as(values)
 
     # Tensor.scatter_reduce() is only available in PyTorch 1.12
     if torch.__version__ >= (1, 12, 0):
@@ -64,29 +64,29 @@ def sparse_row_softmax(
         max_val = max_val.scatter_reduce(
             0, expanded_row_idx, values, reduce="amax", include_self=False
         )
-        values = values - F.embedding(row_idx, max_val)
+        values = values - F.embedding(idx, max_val)
 
     values = values.exp()
     sum_val = torch.zeros(reduced_shape, device=values.device)
     sum_val = sum_val.scatter_add_(0, expanded_row_idx, values)
-    values = values / F.embedding(row_idx, sum_val)
+    values = values / F.embedding(idx, sum_val)
 
     return values
 
 
 def sparse_aggregate(
-    row_idx: torch.Tensor, values: torch.Tensor, num_nodes: int
+    idx: torch.Tensor, values: torch.Tensor, num_nodes: int
 ) -> torch.Tensor:
     """Aggregate N-dim features from neighbors. This can be used for multi-head mechanism in GAT.
     
     This is equivalent to `torch.sparse.sum(torch.sparse_coo_tensor(indices, values), dim=1).to_dense()`.
 
     Args:
-        row_idx: row indices. Shape (nnz,)
+        idx: row indices. Shape (nnz,)
         values: features from neighbors. Shape (nnz, dim1, dim2, ...)
         num_nodes: number of nodes
     """
 
-    row_idx = row_idx.view([-1] + [1] * (values.dim() - 1)).expand_as(values)
+    idx = idx.view([-1] + [1] * (values.dim() - 1)).expand_as(values)
     out = torch.zeros((num_nodes,) + values.shape[1:], device=values.device)
-    return out.scatter_add_(0, row_idx, values)
+    return out.scatter_add_(0, idx, values)

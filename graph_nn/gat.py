@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from .types import _Activation
-from .utils import init_glorot_uniform, sparse_aggregate, sparse_row_softmax
+from .utils import init_glorot_uniform, sparse_aggregate, sparse_softmax
 
 __all__ = ["GATLayer"]
 
@@ -49,7 +49,7 @@ class GATLayer(nn.Module):
         dst_attn = F.embedding(col_idx, (x * self.dst_attn).sum(dim=-1))
         attn_coef = self.act(src_attn + dst_attn)
 
-        values = sparse_row_softmax(row_idx, attn_coef, x.shape[0])
+        values = sparse_softmax(row_idx, attn_coef, x.shape[0])
         values = self.dropout(values)  # DropEdge might be more efficient
 
         values = x[col_idx] * values.unsqueeze(2)
