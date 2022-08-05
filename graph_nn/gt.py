@@ -5,6 +5,7 @@ import torch
 from torch import nn
 
 from .types import _Activation
+from .utils import sparse_aggregate, sparse_row_softmax
 
 
 class GTLayer(nn.Module):
@@ -48,15 +49,11 @@ class GTLayer(nn.Module):
     def _self_attention(
         self, x: torch.Tensor, edge_indices: torch.Tensor
     ) -> torch.Tensor:
+        row_idx, col_idx = edge_indices[0], edge_indices[1]
         qkv = self.attn_linear(x).reshape(-1, self.num_heads, self.head_dim * 3)
         q, k, v = qkv.chunk(3, dim=2)
-        alpha = (q[edge_indices[0]] * k[edge_indices[1]]).sum(2) * self.scale
-        alpha_mat = torch.sparse_coo_tensor(edge_indices, alpha, requires_grad=True)
-        weights = torch.sparse.softmax(alpha_mat, dim=1).coalesce()
-        indices = weights.indices()
-        values = weights.values()
-        out = []
-        for i in range(self.num_heads):
-            w_i = torch.sparse_coo_tensor(indices, values[:, i])
-            out.append(torch.sparse.mm(w_i, v[:, i]))
-        return self.dropout(torch.cat(out, dim=1))
+        alpha = (q[row_idx] * k[col_idx]).sum(2) * self.scale
+        weights = sparse_row_softmax(row_idx, alpha, x.shape[0])
+        values = v[col_idx] * weights.unsqueeze(2)
+        return sparse_aggregate(row_idx, values, x.shape[0]).flatten(1)
+

@@ -11,8 +11,9 @@ from torch_geometric.data import Dataset as PyGDataset
 from torch_geometric.datasets import NELL, Planetoid
 
 from papers import GATModel, GCNModel
+from papers.gt import GTModel
 
-_model_mapper = {"gcn": GCNModel, "gat": GATModel}
+_model_mapper = {"gcn": GCNModel, "gat": GATModel, "gt": GTModel}
 
 
 def get_dataset(dataset_name: str) -> PyGDataset:
