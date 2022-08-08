@@ -24,12 +24,7 @@ conda install pytorch -c pytorch
 conda install pyg -c pyg
 ```
 
-As of this writing:
-- PyTorch Geometric doesn't have pre-built binaries for macOS ARM64 (Apple Silicon). You might need to install it from source
-  ```bash
-  pip install torch-sparse torch-scatter
-  pip install torch-geometric
-  ```
+Note that you don't need `torch-scatter` and `torch-sparse` to use the datasets from PyTorch Geometric, except for NELL (to be confirmed).
 
 ## Reproduce paper results
 
@@ -82,3 +77,20 @@ Related issues to GAT on CiteSeer and PubMed:
 - https://github.com/PetarV-/GAT/issues/12
 
 For PubMed, using hyperparameters provided by the paper `--l2_regularization 1e-3 --lr 1e-2`, I can only achieve 77.7 accuracy.
+
+## Unit tests
+
+The implementations here are tested against PyTorch Geometric's implementations for correctness. You will need to install `torch-scatter` and `torch-sparse` together with PyTorch Geometric. See their [doc](https://github.com/pyg-team/pytorch_geometric) for installation instructions.
+
+As of this writing, there are no pre-built `torch-scatter` and `torch-sparse` binaries for macOS ARM64 (Apple Silicon). You will need to install them from source
+
+```bash
+pip install torch-scatter torch-sparse
+pip install torch-geometric
+```
+
+Once you have the pre-requisites, install `pytest` via conda or pip then run:
+
+```bash
+python -m pytest
+```
