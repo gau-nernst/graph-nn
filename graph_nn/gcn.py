@@ -12,16 +12,23 @@ class GCNLayer(nn.Module):
     Original implementation: https://github.com/tkipf/gcn
     """
 
-    def __init__(self, input_dim: int, output_dim: int):
+    def __init__(self, input_dim: int, output_dim: int, bias: bool = False):
         super().__init__()
         self.linear = nn.Linear(input_dim, output_dim, bias=False)
+        self.bias = nn.Parameter(torch.empty(output_dim)) if bias else None
+
         self.reset_parameters()
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.linear.weight)
+        if self.bias is not None:
+            nn.init.zeros_(self.bias)
 
     def forward(self, x: torch.Tensor, adj_mat: torch.Tensor) -> torch.Tensor:
-        return adj_mat @ self.linear(x)
+        out = adj_mat @ self.linear(x)
+        if self.bias is not None:
+            out = out + self.bias
+        return out
 
     @staticmethod
     def normalize_adjacency_matrix(

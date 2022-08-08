@@ -20,10 +20,11 @@ class GCNModel(nn.Module):
         num_classes: int,
         dropout: float,
         activation: _Activation = partial(nn.ReLU, inplace=True),
+        bias: bool = False,
     ):
         super().__init__()
-        self.layer1 = GCNLayer(input_dim, hidden_dim)
-        self.layer2 = GCNLayer(hidden_dim, num_classes)
+        self.layer1 = GCNLayer(input_dim, hidden_dim, bias=bias)
+        self.layer2 = GCNLayer(hidden_dim, num_classes, bias=bias)
         self.act = activation()
         self.dropout = Dropout(p=dropout)
 
@@ -35,6 +36,7 @@ class GCNModel(nn.Module):
     def add_arguments(parser: argparse.ArgumentParser):
         parser.add_argument("--hidden_dim", type=int, default=16)
         parser.add_argument("--dropout", type=float, default=0.5)
+        parser.add_argument("--bias", action="store_true")
 
     @staticmethod
     def build_model(
