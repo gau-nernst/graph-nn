@@ -7,6 +7,11 @@ __all__ = ["GCNLayer"]
 
 
 class GCNLayer(nn.Module):
+    """Graph Convolutional Network as proposed in https://arxiv.org/pdf/1609.02907.pdf (ICLR 2017)
+
+    Original implementation: https://github.com/tkipf/gcn
+    """
+
     def __init__(self, input_dim: int, output_dim: int):
         super().__init__()
         self.linear = nn.Linear(input_dim, output_dim, bias=False)

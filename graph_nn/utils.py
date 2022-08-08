@@ -78,7 +78,7 @@ def sparse_aggregate(
     idx: torch.Tensor, values: torch.Tensor, num_nodes: int
 ) -> torch.Tensor:
     """Aggregate N-dim features from neighbors. This can be used for multi-head mechanism in GAT.
-    
+
     This is equivalent to `torch.sparse.sum(torch.sparse_coo_tensor(indices, values), dim=1).to_dense()`.
 
     Args:
