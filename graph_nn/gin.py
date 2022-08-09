@@ -9,7 +9,7 @@ __all__ = ["GINLayer"]
 
 
 class GINLayer(nn.Module):
-    """Graph Attention Network as proposed in https://arxiv.org/pdf/1810.00826.pdf (ICLR 2019)
+    """Graph Isomorphism Network as proposed in https://arxiv.org/pdf/1810.00826.pdf (ICLR 2019)
 
     Original implementation: https://github.com/weihua916/powerful-gnns
     """
@@ -18,15 +18,17 @@ class GINLayer(nn.Module):
         self,
         input_dim: int,
         output_dim: int,
-        activation: _Activation = partial(nn.ReLU, inplace=True),
         norm: _Norm = nn.BatchNorm1d,
+        activation: _Activation = partial(nn.ReLU, inplace=True),
     ):
         super().__init__()
         self.mlp = nn.Sequential(
             nn.Linear(input_dim, output_dim, bias=False),
             norm(output_dim),
             activation(),
-            nn.Linear(output_dim, output_dim),
+            nn.Linear(output_dim, output_dim, bias=False),
+            norm(output_dim),
+            activation(),
         )
         self.coef = nn.Parameter(torch.tensor(1.0))
 
