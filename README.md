@@ -7,8 +7,10 @@
 This repo re-implements some popular Graph Neural Networks (GNNs) for learning purpose. The code depends only on PyTorch, but the datasets are taken from PyTorch Geometric.
 
 Implemented models
+
 - [Graph Convolutional Network](https://arxiv.org/abs/1609.02907) (GCN)
 - [Graph Attention Network](https://arxiv.org/abs/1710.10903) (GAT)
+- [Graph Isomorphism Network](https://arxiv.org/abs/1810.00826) (GIN)
 
 ## Set up environment
 
