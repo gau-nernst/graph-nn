@@ -7,8 +7,9 @@
 This repo re-implements some popular Graph Neural Networks (GNNs) for learning purpose. The code depends only on PyTorch, but the datasets are taken from PyTorch Geometric.
 
 Implemented models
-- [Graph Convolutional Network](https://arxiv.org/abs/1609.02907) (GCN)
-- [Graph Attention Network](https://arxiv.org/abs/1710.10903) (GAT)
+- [Graph Convolutional Network](https://arxiv.org/abs/1609.02907) (GCN, ICLR 2017)
+- [Graph Attention Network](https://arxiv.org/abs/1710.10903) (GAT, ICLR 2018)
+- [Simple Graph Convolution](https://arxiv.org/pdf/1902.07153.pdf) (SGC, ICML 2019)
 
 ## Set up environment
 
@@ -77,6 +78,26 @@ Related issues to GAT on CiteSeer and PubMed:
 - https://github.com/PetarV-/GAT/issues/12
 
 For PubMed, using hyperparameters provided by the paper `--l2_regularization 1e-3 --lr 1e-2`, I can only achieve 77.36 (±0.52) accuracy.
+
+### SGC
+
+```bash
+# For Cora
+python main.py --model sgc --dataset Cora --lr 0.2 --num_epochs 100 --weight_decay 1.3e-5 
+
+# For CiteSeer
+python main.py --model sgc --dataset CiteSeer --lr 0.2 --num_epochs 150 --weight_decay 2.35e-5
+
+# For PubMed
+python main.py --model sgc --dataset PubMed --lr 0.2 --num_epochs 100 --weight_decay 7.4e-5
+```
+
+Dataset   | Cora          | CiteSeer      | PubMed
+----------|---------------|---------------|---------------
+Paper     | 81.0 (±0.0)   | 71.9 (±0.1)   | 78.9 (±0.0)
+This repo | 81.03 (±0.05) | 71.80 (±0.00) | 78.96 (±0.05)
+
+Note: the performance can be slightly improved by increasing dropout (e.g. `--dropout 0.6`) and training longer (e.g. `num_epochs 200`)
 
 ## Unit tests
 
