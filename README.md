@@ -28,7 +28,7 @@ Note that you don't need `torch-scatter` and `torch-sparse` to use the datasets 
 
 ## Reproduce paper results
 
-Unless otherwise stated, hyperparameters are taken directly from the respective papers.
+Unless otherwise stated, hyperparameters are taken directly from the respective papers. Each experiment is ran 100 times, and the results are averaged.
 
 ```bash
 python main.py --model gcn --dataset Cora   # other options: CiteSeer, PubMed
@@ -46,10 +46,10 @@ python main.py --model gcn --dataset Cora --dropout 0.5 --l2_regularization 5e-4
 python main.py --model gcn --dataset NELL --dropout 0.1 --l2_regularization 1e-5 --lr 1e-2 --hidden_dim 64 --num_epochs 200
 ```
 
-Dataset   | Cora | CiteSeer | PubMed | NELL
-----------|------|----------|--------|-----
-Paper     | 81.5 | 70.3     | 79.0   | 66.0
-This repo | 82.0 | 72.3     | 79.2   | 58.0
+Dataset   | Cora          | CiteSeer      | PubMed        | NELL
+----------|---------------|---------------|---------------|---------------
+Paper     | 81.5          | 70.3          | 79.0          | 66.0
+This repo | 81.36 (±0.70) | 71.07 (±0.80) | 79.22 (±0.32) | 56.94 (±1.24)
 
 Related issues to GCN on NELL (possibly due to data preprocessing):
 
@@ -66,17 +66,17 @@ python main.py --model gat --dataset Cora --dropout 0.6 --l2_regularization 5e-4
 python main.py --model gat --dataset PubMed --dropout 0.6 --l2_regularization 5e-4 --lr 5e-3 --num_epochs 1000 --output_heads 8
 ```
 
-Dataset   | Cora | CiteSeer | PubMed
-----------|------|----------|--------
-Paper     | 83.0 | 72.5     | 79.0
-This repo | 83.0 | 71.0     | 79.4
+Dataset   | Cora          | CiteSeer      | PubMed
+----------|---------------|---------------|---------------
+Paper     | 83.0          | 72.5          | 79.0
+This repo | 82.65 (±0.41) | 71.04 (±0.41) | 79.11 (±0.28)
 
 Related issues to GAT on CiteSeer and PubMed:
 
 - https://github.com/PetarV-/GAT/issues/14
 - https://github.com/PetarV-/GAT/issues/12
 
-For PubMed, using hyperparameters provided by the paper `--l2_regularization 1e-3 --lr 1e-2`, I can only achieve 77.7 accuracy.
+For PubMed, using hyperparameters provided by the paper `--l2_regularization 1e-3 --lr 1e-2`, I can only achieve 77.36 (±0.52) accuracy.
 
 ## Unit tests
 
