@@ -4,7 +4,7 @@ from torch_geometric.nn import SGConv
 from graph_nn import SGCLayer
 
 
-def test_gcn_against_pyg(num_nodes: int, asymmetric_adj_mat_idx: torch.Tensor):
+def test_sgc_against_pyg(num_nodes: int, asymmetric_adj_mat_idx: torch.Tensor):
     indices = asymmetric_adj_mat_idx
     in_dim, out_dim, K = 50, 64, 2
 
