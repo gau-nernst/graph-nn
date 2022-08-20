@@ -13,7 +13,7 @@ __all__ = ["GATLayer"]
 class GATLayer(nn.Module):
     """Graph Attention Network as proposed in https://arxiv.org/pdf/1710.10903.pdf (ICLR 2018)
 
-    Original implementation: https://github.com/PetarV-/GAT
+    Official implementation: https://github.com/PetarV-/GAT
     """
 
     def __init__(

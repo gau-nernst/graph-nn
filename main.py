@@ -4,6 +4,7 @@ import time
 from copy import deepcopy
 from typing import Tuple
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -96,6 +97,7 @@ def run(
     momentum: float,
     l2_regularization: float,
     device: str,
+    n_runs: int,
     **model_params,
 ) -> None:
     data, num_classes = get_dataset(dataset)
@@ -112,54 +114,65 @@ def run(
         **model_params,
     }
     model_cls = _model_mapper[model.lower()]
-    model, inputs = model_cls.build_model(model_params, data)
-    model.to(device)
-    inputs = tuple(x.to(device) for x in inputs)
-    data = data.to(device)
+    all_test_acc = []
+    for run_i in range(n_runs):
+        print(f"Run {run_i + 1}/{n_runs}")
 
-    optim_cls = getattr(torch.optim, optimizer)
-    optim_params = {"lr": lr, "weight_decay": weight_decay}
-    if optimizer == "SGD":
-        optim_params["momentum"] = momentum
-    optim = optim_cls(model.parameters(), **optim_params)
+        model, inputs = model_cls.build_model(model_params, data)
+        model.to(device)
+        inputs = tuple(x.to(device) for x in inputs)
+        data = data.to(device)
 
-    best_acc = best_epoch = 0
-    best_loss = float("inf")
-    best_state_dict = None
-    time0 = time.time()
-    for i in range(num_epochs):
-        epoch = i + 1
+        optim_cls = getattr(torch.optim, optimizer)
+        optim_params = {"lr": lr, "weight_decay": weight_decay}
+        if optimizer == "SGD":
+            optim_params["momentum"] = momentum
+        optim = optim_cls(model.parameters(), **optim_params)
 
-        train_loss = train(
-            model, inputs, data.y, data.train_mask, optim, l2_regularization
-        )
-        val_loss, val_acc = eval(model, inputs, data.y, data.val_mask)
+        best_acc = best_epoch = 0
+        best_loss = float("inf")
+        best_state_dict = None
+        time0 = time.time()
+        for i in range(num_epochs):
+            epoch = i + 1
 
-        if val_loss < best_loss:
-            best_acc, best_loss, best_epoch = val_acc, val_loss, epoch
-            best_state_dict = deepcopy(model.state_dict())
-
-        if epoch % 100 == 0:
-            log_msg = (
-                f"Epoch {epoch}, "
-                f"train loss {train_loss:.4f}, "
-                f"val loss {val_loss:.4f}, "
-                f"val acc {val_acc * 100:.2f}"
+            train_loss = train(
+                model, inputs, data.y, data.train_mask, optim, l2_regularization
             )
-            print(log_msg)
+            val_loss, val_acc = eval(model, inputs, data.y, data.val_mask)
 
-    print(f"Time taken: {time.time() - time0:.2f}")
-    msg = (
-        f"Best Epoch: {best_epoch}, "
-        f"Val Loss {best_loss:.4f}, "
-        f"Val Acc: {best_acc * 100:.2f}"
-    )
-    print(msg)
+            if val_loss < best_loss:
+                best_acc, best_loss, best_epoch = val_acc, val_loss, epoch
+                best_state_dict = deepcopy(model.state_dict())
 
-    model.load_state_dict(best_state_dict)
-    test_loss, test_acc = eval(model, inputs, data.y, data.test_mask)
-    print(f"Test Acc: {test_acc * 100:.2f}")
-    return test_acc
+            if epoch % 100 == 0:
+                log_msg = (
+                    f"Epoch {epoch}, "
+                    f"train loss {train_loss:.4f}, "
+                    f"val loss {val_loss:.4f}, "
+                    f"val acc {val_acc * 100:.2f}"
+                )
+                print(log_msg)
+
+        print(f"Time taken: {time.time() - time0:.2f}")
+        msg = (
+            f"Best Epoch: {best_epoch}, "
+            f"Val Loss {best_loss:.4f}, "
+            f"Val Acc: {best_acc * 100:.2f}"
+        )
+        print(msg)
+
+        model.load_state_dict(best_state_dict)
+        test_loss, test_acc = eval(model, inputs, data.y, data.test_mask)
+        print(f"Test Acc: {test_acc* 100:.2f}")
+        all_test_acc.append(test_acc)
+
+        print()
+
+    acc_mean = np.mean(all_test_acc)
+    acc_std = np.std(all_test_acc, ddof=1)
+    print(f"Test Acc: {acc_mean * 100:.2f} (±{acc_std * 100:.2f})")
+    return acc_mean, acc_std
 
 
 def get_parser() -> argparse.ArgumentParser:
@@ -167,6 +180,7 @@ def get_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", required=True)
     parser.add_argument("--dataset", required=True)
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--n_runs", type=int, default=1)
 
     parser.add_argument("--num_epochs", type=int, default=300)
     parser.add_argument("--optimizer", default="Adam")
