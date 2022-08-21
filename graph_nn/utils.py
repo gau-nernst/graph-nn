@@ -1,7 +1,6 @@
 from typing import Optional
 
 import torch
-import torch.nn.functional as F
 from torch import nn
 
 __all__ = [
@@ -64,12 +63,12 @@ def sparse_softmax(
         max_val = max_val.scatter_reduce(
             0, expanded_row_idx, values, reduce="amax", include_self=False
         )
-        values = values - F.embedding(idx, max_val)
+        values = values - max_val[idx]
 
     values = values.exp()
     sum_val = torch.zeros(reduced_shape, device=values.device)
     sum_val = sum_val.scatter_add_(0, expanded_row_idx, values)
-    values = values / F.embedding(idx, sum_val)
+    values = values / sum_val[idx]
 
     return values
 
